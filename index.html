@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Builder :: samplesource → redirect</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+  :root{
+    --bg:        #0a0d0c;
+    --panel:     #101513;
+    --panel-2:   #141a18;
+    --line:      #1f2925;
+    --line-lit:  #2c3934;
+    --text:      #d7e4de;
+    --text-dim:  #6f8479;
+    --text-mute: #4a5750;
+    --accent:    #5ee6a8;
+    --accent-dim:#2f5c47;
+    --warn:      #e6b85e;
+    --err:       #e65e5e;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(94,230,168,0.05), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .scan{
+    position:fixed; inset:0; pointer-events:none; z-index:50; opacity:0.025;
+    background:repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px);
+    mix-blend-mode:overlay;
+  }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:28px 22px 60px; }
+
+  /* header */
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding-bottom:16px; margin-bottom:22px;
+    flex-wrap:wrap; gap:10px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:12px; }
+  .brand .dot{ color:var(--accent); }
+  h1{
+    font-size:15px; font-weight:700; letter-spacing:0.04em; margin:0;
+    text-transform:uppercase; color:var(--text);
+  }
+  .sub{ color:var(--text-dim); font-size:11.5px; letter-spacing:0.03em; }
+  .status{
+    font-size:11px; color:var(--text-mute); letter-spacing:0.05em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .status .led{ width:6px; height:6px; border-radius:50%; background:var(--text-mute); box-shadow:none; }
+  .status.ok .led{ background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .status.warn .led{ background:var(--warn); box-shadow:0 0 8px var(--warn); }
+
+  /* section framing */
+  .tag{
+    font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--text-mute); margin-bottom:8px; display:flex; align-items:center; gap:8px;
+  }
+  .tag::before{ content:''; width:14px; height:1px; background:var(--line-lit); }
+  .tag b{ color:var(--accent); font-weight:600; }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+  @media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:16px;
+  }
+  .panel.full{ grid-column:1 / -1; }
+
+  label.field-label{
+    display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.1em;
+    color:var(--text-dim); margin-bottom:7px;
+  }
+
+  input[type=text], textarea{
+    width:100%; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--text); font-family:var(--mono); font-size:12.5px;
+    border-radius:4px; padding:10px 11px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input[type=text]:focus, textarea:focus{
+    border-color:var(--accent-dim); box-shadow:0 0 0 3px rgba(94,230,168,0.08);
+  }
+  input[type=text]::placeholder, textarea::placeholder{ color:var(--text-mute); }
+
+  textarea{
+    resize:vertical; min-height:230px; white-space:pre; overflow-wrap:normal; overflow-x:auto;
+  }
+
+  .hint{ font-size:11px; color:var(--text-mute); margin-top:7px; line-height:1.55; }
+  .hint code{ color:var(--text-dim); background:var(--panel-2); padding:1px 5px; border-radius:3px; }
+
+  /* buttons */
+  .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  button{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:0.04em; text-transform:uppercase;
+    cursor:pointer; border-radius:4px; padding:9px 16px; border:1px solid var(--line-lit);
+    background:var(--panel-2); color:var(--text-dim); transition:all .15s ease;
+  }
+  button:hover{ border-color:var(--accent-dim); color:var(--text); }
+  button.primary{
+    background:var(--accent); border-color:var(--accent); color:#08130d; font-weight:700;
+  }
+  button.primary:hover{ filter:brightness(1.08); }
+  button:active{ transform:translateY(1px); }
+  button.ghost{ background:transparent; }
+  button.small{ padding:5px 10px; font-size:10.5px; }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .count{ font-size:11px; color:var(--text-mute); margin-left:auto; }
+
+  /* output */
+  .out-toolbar{ display:flex; align-items:center; margin-bottom:10px; gap:10px; flex-wrap:wrap; }
+  .out-toolbar .tag{ margin-bottom:0; flex:1; }
+
+  .rows{ display:flex; flex-direction:column; gap:1px; border:1px solid var(--line); border-radius:5px; overflow:hidden; }
+  .out-row{
+    display:grid; grid-template-columns:26px 130px 1fr 68px; gap:12px; align-items:center;
+    background:var(--panel-2); padding:10px 12px; border-bottom:1px solid var(--line);
+  }
+  .out-row:last-child{ border-bottom:none; }
+  .out-row:hover{ background:#161d1a; }
+  .idx{ color:var(--text-mute); font-size:11px; }
+  .src-title{ color:var(--accent); font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .src-url{ color:var(--text); font-size:12px; word-break:break-all; }
+  .src-url .p{ color:var(--text-dim); }
+  .copy-btn{ justify-self:end; }
+
+  .empty{
+    padding:36px 16px; text-align:center; color:var(--text-mute); font-size:12px; line-height:1.7;
+  }
+  .empty .glyph{ font-size:20px; color:var(--line-lit); display:block; margin-bottom:8px; }
+
+  .issues{
+    margin-top:12px; border:1px solid var(--accent-dim); background:rgba(230,184,94,0.05);
+    border-radius:5px; padding:10px 12px; font-size:11.5px; color:var(--warn);
+    border-color:rgba(230,184,94,0.3);
+  }
+  .issues b{ color:var(--warn); }
+  .issues ul{ margin:6px 0 0; padding-left:18px; color:var(--text-dim); }
+
+  .lang-mappings{ display:flex; flex-direction:column; gap:7px; }
+  .lang-map-row{ display:grid; grid-template-columns:80px 1fr; gap:9px; align-items:center; }
+  .lang-code{ color:var(--accent); font-weight:600; background:var(--panel-2); border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
+  .lang-select{ width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text); font-family:var(--mono); font-size:12px; border-radius:4px; padding:8px 10px; outline:none; }
+  .lang-select:focus{ border-color:var(--accent-dim); box-shadow:0 0 0 3px rgba(94,230,168,0.08); }
+  .lang-empty{ color:var(--text-mute); border:1px dashed var(--line-lit); border-radius:4px; padding:9px 10px; font-size:11px; }
+
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-track{ background:var(--panel); }
+  ::-webkit-scrollbar-thumb{ background:var(--line-lit); border-radius:5px; }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--panel); border:1px solid var(--accent-dim); color:var(--accent);
+    padding:9px 18px; border-radius:5px; font-size:11.5px; letter-spacing:0.03em;
+    opacity:0; transition:opacity .2s ease, transform .2s ease; pointer-events:none; z-index:100;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:200;}
+  .confirm-box{width:min(460px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line-lit);border-radius:6px;padding:18px;box-shadow:0 18px 60px rgba(0,0,0,.45);}
+  .confirm-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-bottom:10px;}
+  .confirm-text{font-size:12px;color:var(--text);line-height:1.65;}
+  .confirm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+
+</style>
+</head>
+<body>
+<div class="scan"></div>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="dot">▸</span>
+      <div>
+        <h1>Link Builder</h1>
+        <div class="sub">samplesource XML → redirect URL list</div>
+      </div>
+    </div>
+    <div class="status" id="status"><span class="led"></span><span id="statusText">idle</span></div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="tag"><b>01</b> Common Link</div>
+      <label class="field-label" for="commonLink">Base URL</label>
+      <input type="text" id="commonLink" placeholder="https://surveys.harrisinsights.com/survey/selfserve/53b/">
+      <div class="hint">Prefixed onto every generated link. Include the trailing <code>?</code> — parameters are appended directly after it.</div>
+    </div>
+
+<div class="panel">
+      <div class="tag"><b>02</b> Options & Mapping</div>
+      
+      <label class="field-label">Var value format</label>
+      <div class="row" style="margin-top:0;">
+        <button class="small" id="fmtDollar" data-fmt="$name">$name</button>
+        <button class="small" id="fmtBrace" data-fmt="${name}">${name}</button>
+      </div>
+      
+      <div style="margin-top:16px;">
+        <label class="field-label" for="languageOptions">Language options</label>
+        <input type="text" id="languageOptions" placeholder="english, canadian, uk, french">
+        <div class="hint">Enter the language values you want available in the dropdowns, separated by commas.</div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label class="field-label">Map <code>co</code> → language</label>
+        <div id="langMappings" class="lang-mappings">
+          <div class="lang-empty">Paste your samplesource XML to detect <code>co</code> values.</div>
+        </div>
+        <div class="hint">For each <code>co</code> value, choose one of the languages you entered above. Choose <code>— skip decLang —</code> when that country should not receive a <code>decLang</code> parameter.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="panel full">
+    <div class="tag"><b>03</b> Sample Sources</div>
+    <label class="field-label" for="xmlInput">Paste one or more &lt;samplesource&gt; blocks</label>
+    <textarea id="xmlInput" spellcheck="false" placeholder="&lt;samplesource list=&quot;act&quot;&gt;
+  &lt;title&gt;Acuity&lt;/title&gt;
+  &lt;var name=&quot;uid&quot; unique=&quot;1&quot;/&gt;
+  &lt;exit cond=&quot;qualified&quot; url=&quot;...&quot;/&gt;
+&lt;/samplesource&gt;
+
+&lt;samplesource list=&quot;dyn&quot;&gt;
+  ...
+&lt;/samplesource&gt;"></textarea>
+    <div class="hint">Reads the <code>list</code> attribute, the <code>&lt;title&gt;</code>, and every <code>&lt;var name="..."&gt;</code> inside each <code>&lt;samplesource&gt;</code> block. <code>&lt;exit&gt;</code> tags and everything else are ignored. A var with a <code>values="1,11,100"</code> list expands into one link per value (value written literally, appended to the label); vars without <code>values</code> stay as a placeholder.</div>
+    <div class="row">
+      <button class="primary" id="genBtn">Generate ▸</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+      <button class="ghost" id="sampleBtn">Load sample</button>
+      <span class="count" id="parsedCount"></span>
+    </div>
+    <div id="issues" style="display:none;"></div>
+  </div>
+
+  <div class="panel full">
+    <div class="out-toolbar">
+      <div class="tag"><b>04</b> Output</div>
+      <button class="small" id="copyAllBtn" disabled>Copy all</button>
+      <button class="small" id="downloadBtn" disabled>Download .txt</button>
+    </div>
+    <div class="rows" id="rows">
+      <div class="empty">
+        <span class="glyph">◌</span>
+        Nothing generated yet — paste samplesource XML above and hit Generate.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<div class="confirm-overlay" id="declangConfirm" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-title">decLang not mapped</div>
+    <div class="confirm-text" id="declangConfirmText"></div>
+    <div class="confirm-actions">
+      <button class="ghost" id="declangNo">No</button>
+      <button class="primary" id="declangYes">Yes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const commonLinkEl = document.getElementById('commonLink');
+  const xmlInputEl   = document.getElementById('xmlInput');
+  const rowsEl       = document.getElementById('rows');
+  const issuesEl     = document.getElementById('issues');
+  const parsedCountEl= document.getElementById('parsedCount');
+  const statusEl     = document.getElementById('status');
+  const statusTextEl = document.getElementById('statusText');
+  const toastEl      = document.getElementById('toast');
+  const copyAllBtn   = document.getElementById('copyAllBtn');
+  const downloadBtn  = document.getElementById('downloadBtn');
+  const declangConfirm = document.getElementById('declangConfirm');
+  const declangConfirmText = document.getElementById('declangConfirmText');
+  const declangYes = document.getElementById('declangYes');
+  const declangNo = document.getElementById('declangNo');
+  const fmtDollarBtn = document.getElementById('fmtDollar');
+  const fmtBraceBtn  = document.getElementById('fmtBrace');
+  const languageOptionsEl = document.getElementById('languageOptions');
+  const langMappingsEl = document.getElementById('langMappings');
+
+  let varFormat = '$name'; // or '${name}'
+  let lastResults = [];
+
+  const SAMPLE = `<samplesource list="act">
+    <title>Acuity</title>
+    <var name="uid" unique="1"/>
+    <exit cond="qualified" url="https://surveys.acuitykp.online/survey/thankyou?auth=X1X1X1&amp;uid=\${uid}"/>
+    <exit cond="terminated and hasMarker('qcTerm')" url="https://surveys.acuitykp.online/survey/thankyou?auth=X2X2X2&amp;uid=\${uid}"/>
+    <exit cond="terminated" url="https://surveys.acuitykp.online/survey/thankyou?auth=X3X3X3&amp;uid=\${uid}"/>
+    <exit cond="overquota" url="https://surveys.acuitykp.online/survey/thankyou?auth=X4X4X4&amp;uid=\${uid}"/>
+  </samplesource>
+
+  <samplesource list="dyn">
+    <title>Dynata</title>
+    <var name="uid" unique="1"/>
+    <var name="hash"/>
+    <exit cond="qualified" url="https://sample.dynata.com/complete?uid=\${uid}&amp;hash=\${hash}"/>
+  </samplesource>
+
+  <samplesource disableBrowserDupes="1" list="888">
+    <title>TESTING - Internal Staff</title>
+    <var name="smp" required="1" values="1,11,100,101"/>
+    <exit cond="qualified">This is a static end page for testing. Your status is <b>COMPLETE</b>.</exit>
+    <exit cond="terminated">This is a static end page for testing. Your status is <b>TERMINATE (IMMEDIATE)</b>.</exit>
+  </samplesource>`;
+
+  // ---- format toggle ----
+  function setFmt(fmt){
+    varFormat = fmt;
+    fmtDollarBtn.classList.toggle('primary', fmt === '$name');
+    fmtBraceBtn.classList.toggle('primary', fmt === '${name}');
+  }
+  fmtDollarBtn.addEventListener('click', () => setFmt('$name'));
+  fmtBraceBtn.addEventListener('click', () => setFmt('${name}'));
+  setFmt('$name');
+
+  function renderVar(name){
+    return varFormat === '$name' ? ('$' + name) : ('${' + name + '}');
+  }
+
+  // ---- parsing ----
+  // Regex-based on purpose: real samplesource XML often has unescaped characters
+  // (raw & in exit urls, stray quotes) that break a strict DOMParser, so we scan
+  // for <samplesource ...> ... </samplesource> blocks directly instead.
+  function parseSampleSources(raw){
+    const blocks = [];
+    const issues = [];
+    const blockRe = /<samplesource\b([^>]*)>([\s\S]*?)<\/samplesource\s*>/gi;
+    let match;
+    let found = 0;
+
+    while ((match = blockRe.exec(raw)) !== null){
+      found++;
+      const attrsStr = match[1];
+      const body = match[2];
+
+      const listMatch = attrsStr.match(/\blist\s*=\s*["']([^"']*)["']/i);
+      const list = listMatch ? listMatch[1] : null;
+
+      const titleMatch = body.match(/<title[^>]*>([\s\S]*?)<\/title\s*>/i);
+      let title = titleMatch ? decodeEntities(titleMatch[1].trim()) : null;
+
+      const varRe = /<var\b([^>]*)\/?>/gi;
+      const vars = [];
+      let vMatch;
+      while ((vMatch = varRe.exec(body)) !== null){
+        const attrs = vMatch[1];
+        const nameMatch = attrs.match(/\bname\s*=\s*["']([^"']*)["']/i);
+        if (!nameMatch) continue;
+        const name = nameMatch[1];
+        if (vars.some(v => v.name === name)) continue;
+
+        const requiredMatch = attrs.match(/\brequired\s*=\s*["']([^"']*)["']/i);
+        const valuesMatch = attrs.match(/\bvalues\s*=\s*["']([^"']*)["']/i);
+        const values = valuesMatch
+          ? valuesMatch[1].split(',').map(v => v.trim()).filter(v => v.length)
+          : null;
+
+        vars.push({ name, required: !!(requiredMatch && requiredMatch[1] === '1'), values });
+      }
+
+      if (!list){
+        issues.push(`Block #${found}${title ? ' ("' + title + '")' : ''} has no list attribute — skipped.`);
+        continue;
+      }
+      if (!title){
+        title = list; // fall back to list code as label
+        issues.push(`Block #${found} (list="${list}") has no <title> — using "${list}" as the label.`);
+      }
+      if (vars.length === 0){
+        issues.push(`Block #${found} ("${title}") has no <var> tags — no params appended.`);
+      }
+      const withValues = vars.filter(v => v.values && v.values.length);
+      if (withValues.length){
+        withValues.forEach(v => {
+          issues.push(`Block #${found} ("${title}") — var "${v.name}" has ${v.values.length} values, expanded into ${v.values.length} line(s).`);
+        });
+      }
+
+      blocks.push({ title, list, vars });
+    }
+
+    if (found === 0){
+      issues.push('No <samplesource> blocks found in the input.');
+    }
+
+    return { blocks, issues };
+  }
+
+  function decodeEntities(str){
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  }
+
+  // A var with a `values="a,b,c"` list gets one output line per value, with that
+  // value written literally into the URL (and appended to the label) instead of
+  // a $placeholder. Vars without a values list keep using the placeholder.
+  // Multiple values-vars in one block are cartesian-expanded across each other.
+  function expandCombos(vars){
+    const valueVars  = vars.filter(v => v.values && v.values.length);
+    const normalVars = vars.filter(v => !(v.values && v.values.length));
+
+    let combos = [[]];
+    valueVars.forEach(vv => {
+      const next = [];
+      combos.forEach(existing => {
+        vv.values.forEach(val => next.push(existing.concat([{ name: vv.name, value: val }])));
+      });
+      combos = next;
+    });
+
+    return combos.map(combo => ({
+      labelSuffix: combo.map(c => `${c.name} ${c.value}`).join(' '),
+      literalParams: combo.map(c => `${c.name}=${encodeURIComponentSafe(c.value)}`),
+      normalVars
+    }));
+  }
+
+  // ---- language mapping UI ----
+  let detectedCoValues = [];
+  const selectedLanguages = {};
+
+  function getLanguageOptions(){
+    const custom = languageOptionsEl.value.split(',').map(v => v.trim()).filter(Boolean);
+    return [...new Set(custom)];
+  }
+
+  function detectCoValues(raw){
+    const values = [];
+    const varRe = /<var\b([^>]*)\/?>/gi;
+    let m;
+    while ((m = varRe.exec(raw)) !== null){
+      const attrs = m[1];
+      const name = attrs.match(/\bname\s*=\s*["']([^"']*)["']/i);
+      if (!name || name[1].toLowerCase() !== 'co') continue;
+      const vals = attrs.match(/\bvalues\s*=\s*["']([^"']*)["']/i);
+      if (!vals) continue;
+      vals[1].split(',').map(v => v.trim()).filter(Boolean).forEach(v => {
+        if (!values.includes(v)) values.push(v);
+      });
+    }
+    return values;
+  }
+
+  function renderLanguageMappings(){
+    const options = getLanguageOptions();
+    if (!detectedCoValues.length){
+      langMappingsEl.innerHTML = '<div class="lang-empty">No literal <code>co</code> values detected yet.</div>';
+      return;
+    }
+
+    langMappingsEl.innerHTML = detectedCoValues.map(co => {
+      const current = selectedLanguages[co] || '';
+      const optionHtml = ['<option value="">— skip decLang —</option>']
+        .concat(options.map(lang => `<option value="${escapeAttr(lang)}" ${lang === current ? 'selected' : ''}>${escapeHtml(lang)}</option>`))
+        .join('');
+      return `<div class="lang-map-row"><div class="lang-code">${escapeHtml(co)}</div><select class="lang-select" data-co="${escapeAttr(co)}">${optionHtml}</select></div>`;
+    }).join('');
+
+    langMappingsEl.querySelectorAll('.lang-select').forEach(select => {
+      select.addEventListener('change', () => {
+        selectedLanguages[select.dataset.co] = select.value;
+        if (lastResults.length) generate();
+      });
+    });
+  }
+
+  function refreshLanguageMappings(){
+    const previous = {...selectedLanguages};
+    detectedCoValues = detectCoValues(xmlInputEl.value);
+    detectedCoValues.forEach(co => {
+      if (previous[co]) selectedLanguages[co] = previous[co];
+    });
+    Object.keys(selectedLanguages).forEach(co => {
+      if (!detectedCoValues.includes(co)) delete selectedLanguages[co];
+    });
+    renderLanguageMappings();
+  }
+
+function buildLinesForBlock(base, block){
+    // selectedLanguages contains the explicit country -> language choices made in the UI.
+    // An empty value means: do not add decLang for that country.
+
+    const combos = expandCombos(block.vars);
+    return combos.map(combo => {
+      const params = ['list=' + encodeURIComponentSafe(block.list)];
+
+      // Process literal parameters (e.g., values="ca,uk,us")
+      combo.literalParams.forEach(p => {
+        const [key, val] = p.split('=');
+        if (key.toLowerCase() === 'declang') return; // Strip manual decLang tags
+        
+        params.push(p);
+        
+        if (key.toLowerCase() === 'co') {
+          const rawCo = decodeURIComponent(val).toLowerCase();
+          // Only add decLang when this country has an explicit language mapping.
+          if (selectedLanguages[rawCo]) params.push('decLang=' + encodeURIComponentSafe(selectedLanguages[rawCo]));
+        }
+      });
+
+      // Process standard variable placeholders
+      combo.normalVars.forEach(v => {
+        if (v.name.toLowerCase() === 'declang') return; // Strip manual decLang tags
+        
+        params.push(v.name + '=' + renderVar(v.name));
+        
+        if (v.name.toLowerCase() === 'co') {
+          // Dynamic co variables have no literal country to map, so retain the placeholder.
+          // This is only used when co itself is not supplied via values=.
+          params.push('decLang=' + renderVar('decLang'));
+        }
+      });
+
+      const url = base + params.join('&');
+      const title = combo.labelSuffix ? `${block.title} ${combo.labelSuffix}` : block.title;
+      return { title, url, line: `${title} : ${url}` };
+    });
+  }
+
+  function encodeURIComponentSafe(v){
+    // list/value codes are short identifiers (act, dyn, 1, 11...) — leave as-is
+    // unless they contain characters that would break a query string.
+    return /^[A-Za-z0-9._~-]+$/.test(v) ? v : encodeURIComponent(v);
+  }
+
+  // ---- render ----
+  function render(results, issues){
+    lastResults = results;
+    parsedCountEl.textContent = results.length
+      ? `${results.length} source${results.length === 1 ? '' : 's'} parsed`
+      : '';
+
+    if (issues.length){
+      issuesEl.style.display = 'block';
+      issuesEl.innerHTML = `<b>Heads up</b> — ${issues.length} note${issues.length === 1 ? '' : 's'}:<ul>${issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`;
+    } else {
+      issuesEl.style.display = 'none';
+      issuesEl.innerHTML = '';
+    }
+
+    if (!results.length){
+      rowsEl.innerHTML = `<div class="empty"><span class="glyph">◌</span>Nothing generated yet — paste samplesource XML above and hit Generate.</div>`;
+      copyAllBtn.disabled = true;
+      downloadBtn.disabled = true;
+      setStatus('idle');
+      return;
+    }
+
+    rowsEl.innerHTML = results.map((r, i) => {
+      const [prefix, ...rest] = r.url.split(/(?<=\?)/); // split right after the first ?
+      return `
+        <div class="out-row" data-i="${i}">
+          <span class="idx">${String(i+1).padStart(2,'0')}</span>
+          <span class="src-title">${escapeHtml(r.title)}</span>
+          <span class="src-url"><span class="p">${escapeHtml(prefix)}</span>${escapeHtml(rest.join(''))}</span>
+          <button class="small copy-btn" data-copy="${escapeAttr(r.line)}">Copy</button>
+        </div>`;
+    }).join('');
+
+    copyAllBtn.disabled = false;
+    downloadBtn.disabled = false;
+    setStatus('ok', `${results.length} link${results.length === 1 ? '' : 's'} ready`);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  function setStatus(kind, text){
+    statusEl.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'warn' ? ' warn' : '');
+    statusTextEl.textContent = text || kind;
+  }
+
+  // ---- generate ----
+  function getUnmappedCoValues(blocks){
+    const missing = [];
+    blocks.forEach(block => {
+      block.vars.forEach(v => {
+        if (v.name.toLowerCase() !== 'co') return;
+        if (v.values && v.values.length){
+          v.values.forEach(co => {
+            const key = co.trim().toLowerCase();
+            if (key && !selectedLanguages[key] && !missing.includes(key)) missing.push(key);
+          });
+        }
+      });
+    });
+    return missing;
+  }
+
+  function askDecLangConfirmation(countries){
+    return new Promise(resolve => {
+      declangConfirmText.innerHTML = countries.length
+        ? `The following <code>co</code> value${countries.length === 1 ? '' : 's'} have no <code>decLang</code> mapping: <b>${countries.map(escapeHtml).join(', ')}</b>.<br><br>Are you sure you want to generate the links without <code>decLang</code> for these countries?`
+        : '';
+      declangConfirm.style.display = 'flex';
+      const finish = value => {
+        declangConfirm.style.display = 'none';
+        declangYes.onclick = null;
+        declangNo.onclick = null;
+        resolve(value);
+      };
+      declangYes.onclick = () => finish(true);
+      declangNo.onclick = () => finish(false);
+    });
+  }
+
+  async function generate(){
+    const base = commonLinkEl.value.trim();
+    const raw = xmlInputEl.value;
+
+    if (!raw.trim()){
+      render([], []);
+      return;
+    }
+
+    const { blocks, issues } = parseSampleSources(raw);
+    const unmapped = getUnmappedCoValues(blocks);
+
+    if (unmapped.length){
+      const confirmed = await askDecLangConfirmation(unmapped);
+      if (!confirmed){
+        setStatus('warn', 'generation cancelled');
+        return;
+      }
+    }
+
+    const results = blocks.flatMap(b => buildLinesForBlock(base, b));
+
+    if (!base){
+      issues.unshift('Common link is empty — add the base URL before generating.');
+    }
+
+    render(results, issues);
+  }
+
+  document.getElementById('genBtn').addEventListener('click', generate);
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    xmlInputEl.value = '';
+    render([], []);
+    xmlInputEl.focus();
+  });
+
+  document.getElementById('sampleBtn').addEventListener('click', () => {
+    xmlInputEl.value = SAMPLE;
+    generate();
+  });
+
+  // ---- copy / download ----
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove('show'), 1400);
+  }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    }
+  }
+
+  rowsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    copyText(btn.getAttribute('data-copy')).then(() => showToast('Line copied'));
+  });
+
+  copyAllBtn.addEventListener('click', () => {
+    if (!lastResults.length) return;
+    copyText(lastResults.map(r => r.line).join('\n')).then(() => showToast(`Copied ${lastResults.length} links`));
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!lastResults.length) return;
+    const blob = new Blob([lastResults.map(r => r.line).join('\n')], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'samplesource-links.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // live-ish regenerate on input change (debounced), but only if there's already output
+  let debounceT;
+  [commonLinkEl, xmlInputEl].forEach(el => {
+    el.addEventListener('input', () => {
+      clearTimeout(debounceT);
+      debounceT = setTimeout(() => { if (lastResults.length) generate(); }, 350);
+    });
+  });
+
+  languageOptionsEl.addEventListener('input', () => {
+    clearTimeout(debounceT);
+    debounceT = setTimeout(() => {
+      const allowed = new Set(getLanguageOptions().map(v => v.toLowerCase()));
+      Object.keys(selectedLanguages).forEach(co => {
+        if (selectedLanguages[co] && !allowed.has(selectedLanguages[co].toLowerCase())) {
+          selectedLanguages[co] = '';
+        }
+      });
+      renderLanguageMappings();
+      if (lastResults.length) generate();
+    }, 250);
+  });
+
+  xmlInputEl.addEventListener('input', () => {
+    clearTimeout(debounceT);
+    debounceT = setTimeout(() => {
+      refreshLanguageMappings();
+      if (lastResults.length) generate();
+    }, 350);
+  });
+
+  refreshLanguageMappings();
+
+})();
+
+
+</script>
+</body>
+</html>
