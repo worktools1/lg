@@ -220,7 +220,7 @@
     <div class="panel">
       <div class="tag"><b>01</b> Common Link</div>
       <label class="field-label" for="commonLink">Base URL</label>
-      <input type="text" id="commonLink" placeholder="https://surveys.harrisinsights.com/survey/selfserve/53b/">
+      <input type="text" id="commonLink" placeholder="https://surveys.xyz.com/survey/selfserve/53b/">
       <div class="hint">Prefixed onto every generated link. Include the trailing <code>?</code> — parameters are appended directly after it.</div>
     </div>
 
@@ -253,14 +253,10 @@
   <div class="panel full">
     <div class="tag"><b>03</b> Sample Sources</div>
     <label class="field-label" for="xmlInput">Paste one or more &lt;samplesource&gt; blocks</label>
-    <textarea id="xmlInput" spellcheck="false" placeholder="&lt;samplesource list=&quot;act&quot;&gt;
-  &lt;title&gt;Acuity&lt;/title&gt;
-  &lt;var name=&quot;uid&quot; unique=&quot;1&quot;/&gt;
+    <textarea id="xmlInput" spellcheck="false" placeholder="&lt;samplesource list=&quot;test&quot;&gt;
+  &lt;title&gt;Test&lt;/title&gt;
+  &lt;var name=&quot;id&quot; unique=&quot;1&quot;/&gt;
   &lt;exit cond=&quot;qualified&quot; url=&quot;...&quot;/&gt;
-&lt;/samplesource&gt;
-
-&lt;samplesource list=&quot;dyn&quot;&gt;
-  ...
 &lt;/samplesource&gt;"></textarea>
     <div class="hint">Reads the <code>list</code> attribute, the <code>&lt;title&gt;</code>, and every <code>&lt;var name="..."&gt;</code> inside each <code>&lt;samplesource&gt;</code> block. <code>&lt;exit&gt;</code> tags and everything else are ignored. A var with a <code>values="1,11,100"</code> list expands into one link per value (value written literally, appended to the label); vars without <code>values</code> stay as a placeholder.</div>
     <div class="row">
@@ -347,23 +343,7 @@
   let varFormat = '$name'; // or '${name}'
   let lastResults = [];
 
-  const SAMPLE = `<samplesource list="act">
-    <title>Acuity</title>
-    <var name="uid" unique="1"/>
-    <exit cond="qualified" url="https://surveys.acuitykp.online/survey/thankyou?auth=X1X1X1&amp;uid=\${uid}"/>
-    <exit cond="terminated and hasMarker('qcTerm')" url="https://surveys.acuitykp.online/survey/thankyou?auth=X2X2X2&amp;uid=\${uid}"/>
-    <exit cond="terminated" url="https://surveys.acuitykp.online/survey/thankyou?auth=X3X3X3&amp;uid=\${uid}"/>
-    <exit cond="overquota" url="https://surveys.acuitykp.online/survey/thankyou?auth=X4X4X4&amp;uid=\${uid}"/>
-  </samplesource>
-
-  <samplesource list="dyn">
-    <title>Dynata</title>
-    <var name="uid" unique="1"/>
-    <var name="hash"/>
-    <exit cond="qualified" url="https://sample.dynata.com/complete?uid=\${uid}&amp;hash=\${hash}"/>
-  </samplesource>
-
-  <samplesource disableBrowserDupes="1" list="888">
+  const SAMPLE = `<samplesource disableBrowserDupes="1" list="888">
     <title>TESTING - Internal Staff</title>
     <var name="smp" required="1" values="1,11,100,101"/>
     <exit cond="qualified">This is a static end page for testing. Your status is <b>COMPLETE</b>.</exit>
