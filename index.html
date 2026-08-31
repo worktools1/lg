@@ -180,6 +180,7 @@
   .confirm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
 
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="scan"></div>
@@ -257,6 +258,7 @@
       <div class="tag"><b>04</b> Output</div>
       <button class="small" id="copyAllBtn" disabled>Copy all</button>
       <button class="small" id="downloadBtn" disabled>Download .txt</button>
+      <button class="small" id="downloadXlsxBtn" disabled>Download .xlsx</button>
     </div>
     <div class="rows" id="rows">
       <div class="empty">
@@ -293,6 +295,7 @@
   const toastEl      = document.getElementById('toast');
   const copyAllBtn   = document.getElementById('copyAllBtn');
   const downloadBtn  = document.getElementById('downloadBtn');
+  const downloadXlsxBtn = document.getElementById('downloadXlsxBtn');
   const declangConfirm = document.getElementById('declangConfirm');
   const declangConfirmText = document.getElementById('declangConfirmText');
   const declangYes = document.getElementById('declangYes');
@@ -488,7 +491,7 @@
     langMappingsEl.querySelectorAll('.lang-select').forEach(select => {
       select.addEventListener('change', () => {
         selectedLanguages[select.dataset.co] = select.value;
-        if (lastResults.length) generate();
+        if (lastResults.length) render([], []);
       });
     });
   }
@@ -542,7 +545,7 @@ function buildLinesForBlock(base, block){
 
       const url = base + params.join('&');
       const title = combo.labelSuffix ? `${block.title} ${combo.labelSuffix}` : block.title;
-      return { title, url, line: `${title} : ${url}` };
+      return { title, url, line: `${title} : ${url}`, source: block.title, sourceList: block.list };
     });
   }
 
@@ -571,6 +574,7 @@ function buildLinesForBlock(base, block){
       rowsEl.innerHTML = `<div class="empty"><span class="glyph">◌</span>Nothing generated yet — paste samplesource XML above and hit Generate.</div>`;
       copyAllBtn.disabled = true;
       downloadBtn.disabled = true;
+      downloadXlsxBtn.disabled = true;
       setStatus('idle');
       return;
     }
@@ -588,6 +592,7 @@ function buildLinesForBlock(base, block){
 
     copyAllBtn.disabled = false;
     downloadBtn.disabled = false;
+    downloadXlsxBtn.disabled = false;
     setStatus('ok', `${results.length} link${results.length === 1 ? '' : 's'} ready`);
   }
 
@@ -720,12 +725,62 @@ function buildLinesForBlock(base, block){
     URL.revokeObjectURL(a.href);
   });
 
-  // live-ish regenerate on input change (debounced), but only if there's already output
+  // ---- xlsx download: one tab per sample source, Label / Link columns ----
+  function safeSheetName(name, used){
+    // Excel sheet names: max 31 chars, no : \ / ? * [ ]
+    let clean = String(name).replace(/[:\\\/\?\*\[\]]/g, ' ').trim();
+    if (!clean) clean = 'Sheet';
+    clean = clean.slice(0, 31);
+    let candidate = clean;
+    let n = 2;
+    while (used.has(candidate.toLowerCase())){
+      const suffix = ' (' + n + ')';
+      candidate = clean.slice(0, 31 - suffix.length) + suffix;
+      n++;
+    }
+    used.add(candidate.toLowerCase());
+    return candidate;
+  }
+
+  downloadXlsxBtn.addEventListener('click', () => {
+    if (!lastResults.length) return;
+    if (typeof XLSX === 'undefined'){
+      showToast('xlsx library failed to load');
+      return;
+    }
+
+    // group rows by sample source (falls back to list code, then a generic label)
+    const groups = [];
+    const groupIndex = {};
+    lastResults.forEach(r => {
+      const key = r.source || r.sourceList || 'Source';
+      if (!(key in groupIndex)){
+        groupIndex[key] = groups.length;
+        groups.push({ key, rows: [] });
+      }
+      groups[groupIndex[key]].rows.push(r);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const usedNames = new Set();
+    groups.forEach(g => {
+      const aoa = [['Label', 'Link'], ...g.rows.map(r => [r.title, r.url])];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [{ wch: 32 }, { wch: 90 }];
+      XLSX.utils.book_append_sheet(wb, ws, safeSheetName(g.key, usedNames));
+    });
+
+    XLSX.writeFile(wb, 'samplesource-links.xlsx');
+    showToast('xlsx downloaded');
+  });
+
+  // clear generated output when inputs change after links were already generated,
+  // so stale results aren't shown against changed settings — user must hit Generate again
   let debounceT;
   [commonLinkEl, xmlInputEl].forEach(el => {
     el.addEventListener('input', () => {
       clearTimeout(debounceT);
-      debounceT = setTimeout(() => { if (lastResults.length) generate(); }, 350);
+      debounceT = setTimeout(() => { if (lastResults.length) render([], []); }, 350);
     });
   });
 
@@ -739,7 +794,7 @@ function buildLinesForBlock(base, block){
         }
       });
       renderLanguageMappings();
-      if (lastResults.length) generate();
+      if (lastResults.length) render([], []);
     }, 250);
   });
 
@@ -747,7 +802,7 @@ function buildLinesForBlock(base, block){
     clearTimeout(debounceT);
     debounceT = setTimeout(() => {
       refreshLanguageMappings();
-      if (lastResults.length) generate();
+      if (lastResults.length) render([], []);
     }, 350);
   });
 
