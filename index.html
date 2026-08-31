@@ -20,7 +20,24 @@
     --accent-dim:#2f5c47;
     --warn:      #e6b85e;
     --err:       #e65e5e;
+    --row-hover: #161d1a;
     --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+
+  html[data-theme="light"]{
+    --bg:        #f3f5f2;
+    --panel:     #ffffff;
+    --panel-2:   #f0f2ee;
+    --line:      #dbe2dc;
+    --line-lit:  #c3cec5;
+    --text:      #1c2622;
+    --text-dim:  #58685f;
+    --text-mute: #8a978f;
+    --accent:    #1f9c66;
+    --accent-dim:#a9dcc2;
+    --warn:      #b5790c;
+    --err:       #c73f3f;
+    --row-hover: #eaeeea;
   }
 
   *{ box-sizing:border-box; }
@@ -35,6 +52,7 @@
     font-size:13.5px;
     line-height:1.5;
     -webkit-font-smoothing:antialiased;
+    transition:background-color .2s ease, color .2s ease;
   }
 
   .scan{
@@ -134,7 +152,7 @@
     background:var(--panel-2); padding:10px 12px; border-bottom:1px solid var(--line);
   }
   .out-row:last-child{ border-bottom:none; }
-  .out-row:hover{ background:#161d1a; }
+  .out-row:hover{ background:var(--row-hover); }
   .idx{ color:var(--text-mute); font-size:11px; }
   .src-title{ color:var(--accent); font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .src-url{ color:var(--text); font-size:12px; word-break:break-all; }
@@ -195,6 +213,7 @@
       </div>
     </div>
     <div class="status" id="status"><span class="led"></span><span id="statusText">idle</span></div>
+    <button class="small ghost" id="themeToggle" type="button" title="Toggle light/dark mode" style="margin-left:4px;">☾ Dark</button>
   </header>
 
   <div class="grid">
@@ -298,6 +317,26 @@
   const downloadXlsxBtn = document.getElementById('downloadXlsxBtn');
   const declangConfirm = document.getElementById('declangConfirm');
   const declangConfirmText = document.getElementById('declangConfirmText');
+
+  // ---- light/dark theme toggle (persisted) ----
+  const themeToggleBtn = document.getElementById('themeToggle');
+  function applyTheme(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggleBtn.textContent = theme === 'light' ? '☀ Light' : '☾ Dark';
+    try { localStorage.setItem('linkbuilder-theme', theme); } catch(e){}
+  }
+  (function initTheme(){
+    let saved;
+    try { saved = localStorage.getItem('linkbuilder-theme'); } catch(e){}
+    if (!saved){
+      saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+    }
+    applyTheme(saved);
+  })();
+  themeToggleBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  });
   const declangYes = document.getElementById('declangYes');
   const declangNo = document.getElementById('declangNo');
   const fmtDollarBtn = document.getElementById('fmtDollar');
