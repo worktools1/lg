@@ -247,6 +247,17 @@
         <div class="hint">For each <code>co</code> value, choose one of the languages you entered above. Choose <code>— skip decLang —</code> when that country should not receive a <code>decLang</code> parameter.</div>
       </div>
 
+      <div style="margin-top:16px;">
+        <label class="field-label" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="forceDecLang" style="width:auto; accent-color:var(--accent); cursor:pointer;">
+          Force <code>decLang</code> on sources without <code>co</code>
+        </label>
+        <select id="forceDecLangValue" class="lang-select" disabled style="margin-top:8px;">
+          <option value="">— choose language —</option>
+        </select>
+        <div class="hint">For any sample source that has no <code>co</code> var at all, add <code>decLang=&lt;value&gt;</code> anyway using the language picked here. Sources that already have a <code>co</code> var keep using the mapping above.</div>
+      </div>
+
     </div>
   </div>
 
@@ -339,6 +350,8 @@
   const fmtBraceBtn  = document.getElementById('fmtBrace');
   const languageOptionsEl = document.getElementById('languageOptions');
   const langMappingsEl = document.getElementById('langMappings');
+  const forceDecLangEl = document.getElementById('forceDecLang');
+  const forceDecLangValueEl = document.getElementById('forceDecLangValue');
 
   let varFormat = '$name'; // or '${name}'
   let lastResults = [];
@@ -515,6 +528,25 @@
     });
   }
 
+  function renderForceDecLangOptions(){
+    const options = getLanguageOptions();
+    const current = forceDecLangValueEl.value;
+    const optionHtml = ['<option value="">— choose language —</option>']
+      .concat(options.map(lang => `<option value="${escapeAttr(lang)}" ${lang === current ? 'selected' : ''}>${escapeHtml(lang)}</option>`))
+      .join('');
+    forceDecLangValueEl.innerHTML = optionHtml;
+    // if the previously chosen language got removed from the options list, reset it
+    if (current && !options.includes(current)) forceDecLangValueEl.value = '';
+  }
+
+  forceDecLangEl.addEventListener('change', () => {
+    forceDecLangValueEl.disabled = !forceDecLangEl.checked;
+    if (lastResults.length) render([], []);
+  });
+  forceDecLangValueEl.addEventListener('change', () => {
+    if (lastResults.length) render([], []);
+  });
+
   function refreshLanguageMappings(){
     const previous = {...selectedLanguages};
     detectedCoValues = detectCoValues(xmlInputEl.value);
@@ -525,11 +557,14 @@
       if (!detectedCoValues.includes(co)) delete selectedLanguages[co];
     });
     renderLanguageMappings();
+    renderForceDecLangOptions();
   }
 
 function buildLinesForBlock(base, block){
     // selectedLanguages contains the explicit country -> language choices made in the UI.
     // An empty value means: do not add decLang for that country.
+    const blockHasCo = block.vars.some(v => v.name.toLowerCase() === 'co');
+    const forceValue = (forceDecLangEl.checked && forceDecLangValueEl.value) ? forceDecLangValueEl.value : null;
 
     const combos = expandCombos(block.vars);
     return combos.map(combo => {
@@ -561,6 +596,11 @@ function buildLinesForBlock(base, block){
           params.push('decLang=' + renderVar('decLang'));
         }
       });
+
+      // Force decLang onto sources that have no co var at all, when enabled.
+      if (!blockHasCo && forceValue) {
+        params.push('decLang=' + encodeURIComponentSafe(forceValue));
+      }
 
       const url = base + params.join('&');
       const title = combo.labelSuffix ? `${block.title} ${combo.labelSuffix}` : block.title;
@@ -813,6 +853,7 @@ function buildLinesForBlock(base, block){
         }
       });
       renderLanguageMappings();
+      renderForceDecLangOptions();
       if (lastResults.length) render([], []);
     }, 250);
   });
